@@ -5,6 +5,27 @@ All notable changes to Plamen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-03-19
+
+### Changed
+- **Skill file architecture**: All 92 skill files restructured from `SKILL_NAME.md` to `skill-name/SKILL.md` named-folder format with YAML frontmatter (`name`, `description`). Enables Claude Code skill registry compliance and reference file splitting for large skills.
+- **Verification protocol split**: 4 large verification-protocol files (700-1097 lines) split into `SKILL.md` + `references/` subdirectory (advanced.md, templates.md) for better context management.
+- **Orchestrator path resolution**: `commands/plamen.md` updated to construct `skill-name/SKILL.md` paths for standard skills, injectable skills, and niche agents (lines 467, 474, 724).
+- **Em-dash normalization**: All em dashes (--) replaced with regular dashes (-) across modified files for consistent formatting.
+
+### Fixed
+- **Blocker from PR #1**: `commands/plamen.md` skill path references were not updated in the original PR -- would have caused silent skill loading failures. Fixed before merge.
+
+## [1.0.4] - 2026-03-19
+
+### Fixed
+- **Scope file estimation**: Parser now handles markdown tables (`| File.sol | 300 |`), bullet lists (`- contracts/File.sol`), and bare paths (`File.sol`) — previously only bare paths worked, causing "~0 lines, 0 files" for markdown-formatted scope files
+- **Cost estimate consistency**: `/plamen` command now calls `plamen.py --estimate` instead of calculating inline — single source of truth, no more divergent numbers between wrapper and command
+- **Double confirmation prompt**: Wrapper now passes `wrapper-launch` flag; `/plamen` skips Step 0d (cost estimate + confirmation) when launched from the wrapper since the user already confirmed
+
+### Added
+- `plamen.py --estimate` CLI flag: outputs JSON cost estimate for use by `/plamen` command
+
 ## [1.0.3] - 2026-03-19
 
 ### Added
