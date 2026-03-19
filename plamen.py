@@ -1124,19 +1124,32 @@ def estimate_cost(target: str, mode: str,
 
     if scope_file and os.path.isfile(scope_file):
         try:
+            import re as _re
             with open(scope_file, 'r', errors='ignore') as sf:
                 for line in sf:
                     line = line.strip()
                     if not line or line.startswith('#') or line.startswith('//'):
                         continue
-                    # Extract filename from paths like "src/contracts/Vault.sol"
-                    base = os.path.basename(line.strip().rstrip('/'))
-                    if base:
-                        scope_names.add(base.lower())
-                        # Also add stem without extension
-                        stem = os.path.splitext(base)[0].lower()
-                        if stem:
-                            scope_names.add(stem)
+                    # Extract .sol/.rs/.move filenames from any format:
+                    #   bare paths: "src/contracts/Vault.sol"
+                    #   markdown tables: "| GatewaySend.sol | 301 |"
+                    #   bullet lists: "- contracts/Vault.sol"
+                    matches = _re.findall(r'[\w/\\.-]+\.(?:sol|rs|move)', line)
+                    if matches:
+                        for m in matches:
+                            base = os.path.basename(m)
+                            scope_names.add(base.lower())
+                            stem = os.path.splitext(base)[0].lower()
+                            if stem:
+                                scope_names.add(stem)
+                    else:
+                        # Fallback: treat entire line as a path
+                        base = os.path.basename(line.strip().rstrip('/'))
+                        if base and '.' in base:
+                            scope_names.add(base.lower())
+                            stem = os.path.splitext(base)[0].lower()
+                            if stem:
+                                scope_names.add(stem)
         except Exception:
             pass
 
@@ -1736,7 +1749,7 @@ def launch_claude(mode: str, target: str, docs: str,
             parts.append(f"ground_truth: {docs}")
         prompt = " ".join(parts)
     else:
-        parts = [f"/plamen {mode} {target}"]
+        parts = [f"/plamen {mode} {target} wrapper-launch"]
         if docs:
             parts.append(f"docs: {docs}")
         else:
@@ -1768,6 +1781,22 @@ def main():
     # Fast path: CLI args skip the interactive UI
     if len(sys.argv) > 1:
         arg = sys.argv[1].lower()
+
+        # ── Estimate subcommand (for /plamen command) ────────
+        if arg == "--estimate":
+            import json as _json
+            est_target = sys.argv[2] if len(sys.argv) > 2 else "."
+            est_mode = sys.argv[3] if len(sys.argv) > 3 else "core"
+            est_scope = ""
+            est_notes = ""
+            for i, a in enumerate(sys.argv):
+                if a == "--scope" and i + 1 < len(sys.argv):
+                    est_scope = sys.argv[i + 1]
+                if a == "--scope-notes" and i + 1 < len(sys.argv):
+                    est_notes = sys.argv[i + 1]
+            r = estimate_cost(est_target, est_mode, est_scope, est_notes)
+            print(_json.dumps(r))
+            return
 
         # ── Install subcommand ───────────────────────────────
         if arg in ("install", "setup"):
